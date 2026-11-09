@@ -1,0 +1,33 @@
+# ===== 运行时 / 第三方软件 =====
+# Node.js 安装目录（505M，非项目代码）
+/node/
+
+# ===== 大型数据集与压缩包 =====
+*.7z
+*.zip
+*.tar
+*.tar.*
+*.gz
+*.xz
+*.rar
+*.zst
+
+# ===== 模型权重 =====
+/ZKNGFNet/ckpt/
+/ZKNGFNet/ckpt.7z
+
+# ===== 生成结果与下载缓存 =====
+/ZKNGFNet/output_directory/
+/ZKNGFNet/.cache/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/
+
+# ===== 其他 =====
+.DS_Store
+Thumbs.db
