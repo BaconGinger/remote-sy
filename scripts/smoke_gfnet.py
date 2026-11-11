@@ -5,6 +5,7 @@ import json
 
 os.chdir('/home/sy/lgp/GFNet')
 sys.path.insert(0, '/home/sy/lgp/GFNet')
+sys.path.insert(0, '/home/sy/lgp/GFNet/third_party/romatch_pkg')
 
 import torch
 from model.network import GFNet

@@ -28,14 +28,20 @@
 git clone git@github.com:KN-Zhang/GFNet.git /home/sy/lgp/GFNet
 git -C /home/sy/lgp/GFNet apply /home/sy/lgp/patches/gfnet_local_changes.patch
 
-# 2. 链接数据与权重（test.py 要求项目根目录下有 data/ 与 ckpts/）
+# 2. 安装 romatch（RoMa 工具包，仅一个导入依赖，装到 third_party 避免改动共享环境）
 cd /home/sy/lgp/GFNet
+pip install --no-deps --target third_party/romatch_pkg romatch
+
+# 3. 链接数据与权重（test.py 要求项目根目录下有 data/ 与 ckpts/）
 ln -s /home/sy/lgp/ZKNGFNet/output_directory/cvpr25_dataset data
 ln -s /home/sy/lgp/ZKNGFNet/ckpt ckpts
 
-# 3. 运行全部测试（5 个数据集，日志写入 /home/sy/lgp/logs/）
+# 4. 运行全部测试（5 个数据集，日志写入 /home/sy/lgp/logs/）
 bash /home/sy/lgp/scripts/run_gfnet_tests.sh
 ```
+
+运行环境变量：`TORCH_HOME=/home/sy/lgp/.cache/torch`（DINOv2 权重缓存），
+`PYTHONPATH=/home/sy/lgp/GFNet/third_party/romatch_pkg`（romatch 包）。
 
 冒烟测试（单对图像，约 1 分钟）：
 

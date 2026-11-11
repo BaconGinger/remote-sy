@@ -5,6 +5,7 @@ set -euo pipefail
 
 cd /home/sy/lgp/GFNet
 export TORCH_HOME=/home/sy/lgp/.cache/torch
+export PYTHONPATH=/home/sy/lgp/GFNet/third_party/romatch_pkg${PYTHONPATH:+:$PYTHONPATH}
 export CUDA_VISIBLE_DEVICES=0
 PY=/home/sy/anaconda3/envs/lhq-gf/bin/python
 LOGDIR=/home/sy/lgp/logs
