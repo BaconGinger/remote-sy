@@ -20,6 +20,13 @@
 /ZKNGFNet/output_directory/
 /ZKNGFNet/.cache/
 
+# ===== GFNet 复现 =====
+# 上游代码副本（按 README 克隆），本地修改见 patches/
+/GFNet/
+/GFNet_paper.pdf
+/.cache/
+/logs/
+
 # ===== Python =====
 __pycache__/
 *.py[cod]
