@@ -1,0 +1,85 @@
+diff --git a/estimation.py b/estimation.py
+index 75bc630..57fe27a 100644
+--- a/estimation.py
++++ b/estimation.py
+@@ -7,7 +7,10 @@ from PIL import Image
+ import time
+ import kornia
+ import kornia.feature as KF
+-from kornia_moons.viz import draw_LAF_matches
++try:
++    from kornia_moons.viz import draw_LAF_matches
++except ImportError:  # only needed for if_print=True visualization
++    draw_LAF_matches = None
+ 
+ def auc(errors, thresholds):
+     sort_idx = np.argsort(errors)
+diff --git a/model/transformer/__pycache__/__init__.cpython-310.pyc b/model/transformer/__pycache__/__init__.cpython-310.pyc
+index edf80e6..a75fc55 100644
+Binary files a/model/transformer/__pycache__/__init__.cpython-310.pyc and b/model/transformer/__pycache__/__init__.cpython-310.pyc differ
+diff --git a/model/transformer/__pycache__/dinov2.cpython-310.pyc b/model/transformer/__pycache__/dinov2.cpython-310.pyc
+index 632df01..a971960 100644
+Binary files a/model/transformer/__pycache__/dinov2.cpython-310.pyc and b/model/transformer/__pycache__/dinov2.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/__init__.cpython-310.pyc b/model/transformer/layers/__pycache__/__init__.cpython-310.pyc
+index a30aba5..f71acba 100644
+Binary files a/model/transformer/layers/__pycache__/__init__.cpython-310.pyc and b/model/transformer/layers/__pycache__/__init__.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/attention.cpython-310.pyc b/model/transformer/layers/__pycache__/attention.cpython-310.pyc
+index bc0bd5e..478272f 100644
+Binary files a/model/transformer/layers/__pycache__/attention.cpython-310.pyc and b/model/transformer/layers/__pycache__/attention.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/block.cpython-310.pyc b/model/transformer/layers/__pycache__/block.cpython-310.pyc
+index bd3901b..e93d86e 100644
+Binary files a/model/transformer/layers/__pycache__/block.cpython-310.pyc and b/model/transformer/layers/__pycache__/block.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/dino_head.cpython-310.pyc b/model/transformer/layers/__pycache__/dino_head.cpython-310.pyc
+index c3a3515..5fd08bf 100644
+Binary files a/model/transformer/layers/__pycache__/dino_head.cpython-310.pyc and b/model/transformer/layers/__pycache__/dino_head.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/drop_path.cpython-310.pyc b/model/transformer/layers/__pycache__/drop_path.cpython-310.pyc
+index 1f04980..445e1c0 100644
+Binary files a/model/transformer/layers/__pycache__/drop_path.cpython-310.pyc and b/model/transformer/layers/__pycache__/drop_path.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/layer_scale.cpython-310.pyc b/model/transformer/layers/__pycache__/layer_scale.cpython-310.pyc
+index fc9ef61..3f51666 100644
+Binary files a/model/transformer/layers/__pycache__/layer_scale.cpython-310.pyc and b/model/transformer/layers/__pycache__/layer_scale.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/mlp.cpython-310.pyc b/model/transformer/layers/__pycache__/mlp.cpython-310.pyc
+index 6e404b1..f53ab83 100644
+Binary files a/model/transformer/layers/__pycache__/mlp.cpython-310.pyc and b/model/transformer/layers/__pycache__/mlp.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/patch_embed.cpython-310.pyc b/model/transformer/layers/__pycache__/patch_embed.cpython-310.pyc
+index 86b8160..9b8f48b 100644
+Binary files a/model/transformer/layers/__pycache__/patch_embed.cpython-310.pyc and b/model/transformer/layers/__pycache__/patch_embed.cpython-310.pyc differ
+diff --git a/model/transformer/layers/__pycache__/swiglu_ffn.cpython-310.pyc b/model/transformer/layers/__pycache__/swiglu_ffn.cpython-310.pyc
+index ff9927a..c136468 100644
+Binary files a/model/transformer/layers/__pycache__/swiglu_ffn.cpython-310.pyc and b/model/transformer/layers/__pycache__/swiglu_ffn.cpython-310.pyc differ
+diff --git a/model/transformer/layers/attention.py b/model/transformer/layers/attention.py
+index b566a01..5ccd498 100644
+--- a/model/transformer/layers/attention.py
++++ b/model/transformer/layers/attention.py
+@@ -228,7 +228,30 @@ class CrossFlashAttention2(CrossAttention):
+     def forward(self, x: Tensor, key=None, value=None, **kwargs):
+ 
+         if not FLASH_AVAILABLE:
+-            raise NotImplementedError("FLASH-ATTENTION2 is not working!")
++            # Local fallback on GPUs without a usable flash-attn build (e.g., Turing/SM75).
++            # Use SDPA instead of the manual fp16 attention in CrossAttention.forward:
++            # mathematically identical, but with fp32 softmax accumulators like flash-attn,
++            # avoiding fp16 logit overflow (inf/NaN) on outlier inputs.
++            B, N, C = x.shape
++            key = x if key is None else key
++            value = x if value is None else value
++            q = self.q_proj(x).reshape(B, N, self.num_heads, C // self.num_heads).transpose(1, 2)
++            k = self.k_proj(key).reshape(B, key.shape[1], self.num_heads, C // self.num_heads).transpose(1, 2)
++            v = self.v_proj(value).reshape(B, value.shape[1], self.num_heads, C // self.num_heads).transpose(1, 2)
++
++            dropout_p = self.attn_drop_rate if self.training else 0.0
++            if self.softmax_scale is None:
++                softmax_scale = None
++            else:
++                softmax_scale = self.scale * math.log(N, self.train_avg_length)
++
++            x = F.scaled_dot_product_attention(q, k, v, dropout_p=dropout_p,
++                                               scale=softmax_scale, is_causal=False)
++            x = x.transpose(1, 2).reshape([B, N, C])
++
++            x = self.proj(x)
++            x = self.proj_drop(x)
++            return x
+ 
+         B, N, C = x.shape
+         key = x if key is None else key

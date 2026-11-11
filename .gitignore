@@ -22,10 +22,10 @@
 
 # ===== GFNet 复现 =====
 # 上游代码副本（按 README 克隆），本地修改见 patches/
-/GFNet/
-/GFNet_paper.pdf
-/.cache/
-/logs/
+/GFNet/code/
+/GFNet/.cache/
+/GFNet/logs/
+/GFNet/paper/
 
 # ===== Python =====
 __pycache__/
