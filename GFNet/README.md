@@ -24,7 +24,7 @@
 | 项目 | 配置 |
 |---|---|
 | 环境 | conda `lhq-gf`：Python 3.10.13 / torch 2.3.1+cu121 |
-| GPU | 2 × RTX 2080 Ti 22G（Turing/SM75） |
+| GPU | 1 × RTX 2080 Ti 22G（Turing/SM75；另一块 2026-11-11 运行中 Xid 79 掉卡，重启后未恢复） |
 | 数据 | `/home/sy/lgp/ZKNGFNet/output_directory/cvpr25_dataset` |
 | 权重 | `/home/sy/lgp/ZKNGFNet/ckpt/{basic,googlemap,vis_ir_drone}/latest.pth` |
 | DINOv2 权重 | `TORCH_HOME=/home/sy/lgp/GFNet/.cache/torch`（ViT-L/14，约 1.2G） |
@@ -86,7 +86,19 @@ googlemap_224x224 / 672x672 无表格数值，论文以 Figure 4 曲线给出，
 
 ## 复现结果
 
-- 2026-11-11 首次运行：`googlemap_448x448` 跑到 536/1000 时 GPU 0 掉卡
-  （`NVRM: Xid 79, GPU has fallen off the bus`），CUDA 全局不可用，运行中断。
-  该次 NaN 报错很可能是掉卡前的计算损坏所致，已同时加入 SDPA 数值稳定回退。
-- 待机器重启、GPU 恢复后重新运行并在此更新指标。
+2026-11-11 使用官方权重完成 5 个测试集推理，详细对比见
+[`results/results_summary.md`](results/results_summary.md)。
+
+| 数据集 | AUC@3 | AUC@5 | AUC@10 | AUC@20 | 论文 AUC@3 |
+|---|---|---|---|---|---|
+| MSCOCO | 97.88 | 98.73 | 99.36 | 99.68 | 97.67 |
+| VIS-IR | 21.21 | 35.71 | 58.31 | 76.10 | 21.28 |
+| GoogleMap 448 | 51.93 | 66.58 | 80.84 | 89.36 | 51.44 |
+| GoogleMap 224 | 38.49 | 54.86 | 72.49 | 83.68 | — |
+| GoogleMap 672 | 44.76 | 61.08 | 77.50 | 87.70 | — |
+
+主要指标与论文差异在 ±0.5 个点内，ACE 与论文 MACE 一致（MSCOCO 0.064 vs 0.063，
+GoogleMap 2.58 vs 2.57），复现成功。
+
+附注：首次运行时 GPU 0 发生 Xid 79 掉卡导致中断；重启后该卡未恢复，当前使用剩余
+一块 2080 Ti 完成全部评测。

@@ -6,8 +6,8 @@ set -euo pipefail
 cd /home/sy/lgp/GFNet/code
 export TORCH_HOME=/home/sy/lgp/GFNet/.cache/torch
 export PYTHONPATH=/home/sy/lgp/GFNet/code/third_party/romatch_pkg${PYTHONPATH:+:$PYTHONPATH}
-# GPU 0 故障（Xid 79）时默认用 GPU 1；可通过 GPU=0 覆盖
-export CUDA_VISIBLE_DEVICES=${GPU:-1}
+# 当前机器仅剩一块可用 GPU（重启后枚举为 0）；可通过 GPU=... 覆盖
+export CUDA_VISIBLE_DEVICES=${GPU:-0}
 PY=/home/sy/anaconda3/envs/lhq-gf/bin/python
 LOGDIR=/home/sy/lgp/GFNet/logs
 mkdir -p "$LOGDIR"
